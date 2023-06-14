@@ -45,7 +45,7 @@ describe("Result", () => {
     it("should convert where each key is a result into a result with that unwrapped object, leaving plain keys as they are", () => {
       const objectWithResults = {
         name: Result.ok("NAME"),
-        surname: "SURNAME",
+        surname: Result.ok("SURNAME"),
         age: Result.ok(20),
       };
 
@@ -63,7 +63,7 @@ describe("Result", () => {
     it("should return the first error if one of the object keys has a failing result", () => {
       const objectWithResults = {
         name: Result.ok("NAME"),
-        surname: "SURNAME",
+        surname: Result.ok("SURNAME"),
         age: Result.fail(ERROR),
       };
 

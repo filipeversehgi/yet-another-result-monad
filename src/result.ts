@@ -1,7 +1,12 @@
+import { NoFailValueError, NoOkValueError } from "./errors";
+
 enum ResultType {
   Fail,
   Ok,
 }
+
+type UnwrapResult<T extends Result<any, any>> = T extends Result<infer U, any> ? U : never;
+type UnwrapError<T extends Result<any, any>> = T extends Result<any, infer E> ? E : never;
 
 export type AsyncResult<S, E> = Promise<Result<S, E>>;
 
@@ -51,19 +56,16 @@ export class Result<S, E> {
   //   ToupleToUnion<ExcludeFromTuple<UnwrapResultsError<T>, never>>
   // > {
   static collect<T, E>(results: Array<Result<T, E>>): Result<T[], E> {
-    const errors = results
-      .filter(Result.isResult)
-      .filter((result) => result.isFail())
-      .map((result) => result.unwrapFail());
+    const values : T[] = [];
+    for (const result of results) {
+        if (result.isFail()) {
+            return Result.fail(result._error);
+        }
 
-    if (errors.length > 0) {
-      return Result.fail(errors[0]) as Result<T[], E>;
+        values.push(result._data);
     }
 
-    const resultContent = results
-      .filter(Result.isResult)
-      .map((r) => r.unwrap());
-    return Ok(resultContent) as Result<T[], E>;
+    return Result.ok(values);
   }
 
   /**
@@ -74,35 +76,22 @@ export class Result<S, E> {
    * @param obj
    * @returns
    */
-  static collectObject<T>(obj: {
-    [key in keyof T]: T[key];
-  }): TCollectResult<T> {
-    const errors = (Object.values(obj) as Result<any, any>[])
-      .filter(Result.isResult)
-      .filter((result) => result.isFail())
-      .map((result) => result.unwrapFail());
+  public static collectObject<T extends Record<string, Result<any, any>>>(resultsObject: T): Result<{ [K in keyof T]: UnwrapResult<T[K]> }, UnwrapError<T[keyof T]>> {
+    const unwrappedObject: Partial<{ [K in keyof T]: UnwrapResult<T[K]> }> = {};
 
-    if (errors.length > 0) {
-      return Result.fail(errors[0]) as TCollectResult<T>;
+    for (const key in resultsObject) {
+      const result = resultsObject[key];
+      if (result.isFail()) {
+        return Result.fail(result._error);
+      }
+      unwrappedObject[key] = result._data;
     }
 
-    return Result.ok(
-      Object.entries(obj).reduce((acc, cur) => {
-        const [key, value] = cur;
-
-        if (!Result.isResult(value)) {
-          acc[key] = value;
-          return acc;
-        }
-
-        acc[key] = value.unwrap();
-        return acc;
-      }, {} as { [key: string]: any })
-    ) as TCollectResult<T>;
+    return Result.ok(unwrappedObject as { [K in keyof T]: UnwrapResult<T[K]> });
   }
 
   static isResult(result: any | Result<any, any>): result is Result<any, any> {
-    return !!result && !!result.isFail && !!result.isOk;
+    return result instanceof Result;
   }
 
   /**
@@ -122,20 +111,22 @@ export class Result<S, E> {
   }
 
   /**
-   * Unwraps the Ok value of a Result, throws otherwise
-   * @returns boolean
+   * Unwraps the Ok value of a Result. If the Result is Fail, an error is thrown.
+   * @returns The success value of the Result.
+   * @throws {NoOkValueError} Will throw an error if the Result is Fail.
    */
   unwrap(): S {
-    if (!this.isOk()) throw "";
+    if (!this.isOk()) throw new NoOkValueError();
     return this._data;
   }
 
   /**
-   * Unwraps the Fail value of a Result, throws otherwise
-   * @returns boolean
+   * Unwraps the Fail value of a Result. If the Result is Ok, an error is thrown.
+   * @returns The error value of the Result.
+   * @throws {NoFailValueError} Will throw an error if the Result is Ok.
    */
   unwrapFail(): E {
-    if (!this.isFail()) throw "";
+    if (!this.isFail()) throw new NoFailValueError();
     return this._error;
   }
 

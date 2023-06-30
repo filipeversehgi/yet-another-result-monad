@@ -1,6 +1,6 @@
 {
   "name": "yet-another-result-monad",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A typed Result monad with zero dependencies, to handle values that may fail, inspired from Rust",
   "main": "dist/index.js",
   "license": "MIT",

@@ -5,7 +5,7 @@ enum ResultType {
   Ok,
 }
 
-type UnwrapResult<T extends Result<any, any>> = T extends Result<infer U, any> ? U : never;
+type UnwrapResult<T extends Result<any, any> | any> = T extends Result<infer U, any> ? U : T;
 type UnwrapError<T extends Result<any, any>> = T extends Result<any, infer E> ? E : never;
 
 export type AsyncResult<S, E> = Promise<Result<S, E>>;
@@ -18,11 +18,7 @@ export type TCollectResult<T> = Result<
 >;
 
 export class Result<S, E> {
-  private constructor(
-    private _type: ResultType,
-    private _data: S,
-    private _error: E
-  ) {}
+  private constructor(private _type: ResultType, private _data: S, private _error: E) {}
 
   /**
    * Produces a Failing Result instance
@@ -56,13 +52,13 @@ export class Result<S, E> {
   //   ToupleToUnion<ExcludeFromTuple<UnwrapResultsError<T>, never>>
   // > {
   static collect<T, E>(results: Array<Result<T, E>>): Result<T[], E> {
-    const values : T[] = [];
+    const values: T[] = [];
     for (const result of results) {
-        if (result.isFail()) {
-            return Result.fail(result._error);
-        }
+      if (result.isFail()) {
+        return Result.fail(result._error);
+      }
 
-        values.push(result._data);
+      values.push(result._data);
     }
 
     return Result.ok(values);
@@ -76,11 +72,17 @@ export class Result<S, E> {
    * @param obj
    * @returns
    */
-  public static collectObject<T extends Record<string, Result<any, any>>>(resultsObject: T): Result<{ [K in keyof T]: UnwrapResult<T[K]> }, UnwrapError<T[keyof T]>> {
+  public static collectObject<T extends Record<string, Result<any, any> | any>>(resultsObject: T): Result<{ [K in keyof T]: UnwrapResult<T[K]> }, UnwrapError<T[keyof T]>> {
     const unwrappedObject: Partial<{ [K in keyof T]: UnwrapResult<T[K]> }> = {};
 
     for (const key in resultsObject) {
       const result = resultsObject[key];
+
+      if (!Result.isResult(result)) {
+        unwrappedObject[key] = result;
+        continue;
+      }
+
       if (result.isFail()) {
         return Result.fail(result._error);
       }
@@ -157,9 +159,7 @@ export class Result<S, E> {
    * @param transform
    * @returns
    */
-  flatMap<NewS, NewE>(
-    transform: (data: S) => Result<NewS, NewE>
-  ): Result<NewS, E | NewE> {
+  flatMap<NewS, NewE>(transform: (data: S) => Result<NewS, NewE>): Result<NewS, E | NewE> {
     if (!this.isOk()) return Result.fail(this._error);
     const newData = transform(this._data);
     if (newData.isFail()) return Result.fail(newData.unwrapFail());
@@ -171,9 +171,7 @@ export class Result<S, E> {
    * @param transform
    * @returns
    */
-  flatMapFail<NewS, NewE>(
-    transform: (error: E) => Result<NewS, NewE>
-  ): Result<S | NewS, NewE> {
+  flatMapFail<NewS, NewE>(transform: (error: E) => Result<NewS, NewE>): Result<S | NewS, NewE> {
     if (!this.isFail()) return Result.ok(this._data);
     const newError = transform(this._error);
     if (newError.isOk()) return Result.ok(newError.unwrap());
@@ -186,9 +184,7 @@ export class Result<S, E> {
    * @param transform
    * @returns
    */
-  async asyncMap<NewS>(
-    transform: (data: S) => Promise<NewS>
-  ): Promise<Result<NewS, E>> {
+  async asyncMap<NewS>(transform: (data: S) => Promise<NewS>): Promise<Result<NewS, E>> {
     if (!this.isOk()) return Result.fail(this._error);
     const newData = await transform(this._data);
     return Result.ok(newData);
@@ -200,9 +196,7 @@ export class Result<S, E> {
    * @param transform
    * @returns
    */
-  async asyncMapFail<NewE>(
-    transform: (error: E) => Promise<NewE>
-  ): Promise<Result<S, NewE>> {
+  async asyncMapFail<NewE>(transform: (error: E) => Promise<NewE>): Promise<Result<S, NewE>> {
     if (!this.isFail()) return Result.ok(this._data);
     const newError = await transform(this._error);
     return Result.fail(newError);
@@ -214,9 +208,7 @@ export class Result<S, E> {
    * @param transform
    * @returns
    */
-  async asyncFlatMap<NewS, NewE>(
-    transform: (data: S) => Promise<Result<NewS, NewE>>
-  ): Promise<Result<NewS, E | NewE>> {
+  async asyncFlatMap<NewS, NewE>(transform: (data: S) => Promise<Result<NewS, NewE>>): Promise<Result<NewS, E | NewE>> {
     if (!this.isOk()) return Result.fail(this._error);
     const newData = await transform(this._data);
     if (newData.isFail()) return Result.fail(newData.unwrapFail());
@@ -229,9 +221,7 @@ export class Result<S, E> {
    * @param transform
    * @returns
    */
-  async asyncFlatMapFail<NewS, NewE>(
-    transform: (error: E) => Promise<Result<NewS, NewE>>
-  ): Promise<Result<S | NewS, NewE>> {
+  async asyncFlatMapFail<NewS, NewE>(transform: (error: E) => Promise<Result<NewS, NewE>>): Promise<Result<S | NewS, NewE>> {
     if (!this.isFail()) return Result.ok(this._data);
     const newError = await transform(this._error);
     if (newError.isOk()) return Result.ok(newError.unwrap());

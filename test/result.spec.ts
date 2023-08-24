@@ -14,12 +14,7 @@ describe("Result", () => {
     });
 
     it("should return the first failing result if the array of results contains a error", () => {
-      const arrayOfResults = [
-        Result.ok(OK),
-        Result.fail(ERROR),
-        Result.ok(NEW_OK),
-        Result.fail(NEW_ERROR),
-      ];
+      const arrayOfResults = [Result.ok(OK), Result.fail(ERROR), Result.ok(NEW_OK), Result.fail(NEW_ERROR)];
       const resultOfArrays = Result.collect(arrayOfResults);
       expect(resultOfArrays).toEqual(Result.fail(ERROR));
     });
@@ -45,7 +40,7 @@ describe("Result", () => {
     it("should convert where each key is a result into a result with that unwrapped object, leaving plain keys as they are", () => {
       const objectWithResults = {
         name: Result.ok("NAME"),
-        surname: Result.ok("SURNAME"),
+        surname: "SURNAME",
         age: Result.ok(20),
       };
 
@@ -112,17 +107,13 @@ describe("Result", () => {
       });
 
       it("should async transform the result into a new ok result on asyncFlatMap", async () => {
-        const newResult = await result.asyncFlatMapFail(async () =>
-          Result.ok(NEW_OK)
-        );
+        const newResult = await result.asyncFlatMapFail(async () => Result.ok(NEW_OK));
         expect(newResult.isOk()).toBe(true);
         expect(newResult.unwrap()).toBe(NEW_OK);
       });
 
       it("should async transform the result into a new fail result on asyncFlatMap", async () => {
-        const newResult = await result.asyncFlatMapFail(async () =>
-          Result.fail(NEW_ERROR)
-        );
+        const newResult = await result.asyncFlatMapFail(async () => Result.fail(NEW_ERROR));
         expect(newResult.isFail()).toBe(true);
         expect(newResult.unwrapFail()).toBe(NEW_ERROR);
       });
@@ -140,16 +131,12 @@ describe("Result", () => {
       });
 
       it("should keep the original ok result after a asyncMap", async () => {
-        const newResult = await result.asyncMap(async () =>
-          Result.fail(NEW_ERROR)
-        );
+        const newResult = await result.asyncMap(async () => Result.fail(NEW_ERROR));
         expect(newResult).toEqual(result);
       });
 
       it("should keep the original ok result after a asyncFlatMap", async () => {
-        const newResult = await result.asyncFlatMap(async () =>
-          Result.fail(NEW_ERROR)
-        );
+        const newResult = await result.asyncFlatMap(async () => Result.fail(NEW_ERROR));
         expect(newResult).toEqual(result);
       });
     });
@@ -193,17 +180,13 @@ describe("Result", () => {
       });
 
       it("should async transform the result into a new ok result on asyncFlatMap", async () => {
-        const newResult = await result.asyncFlatMap(async () =>
-          Result.ok(NEW_OK)
-        );
+        const newResult = await result.asyncFlatMap(async () => Result.ok(NEW_OK));
         expect(newResult.isOk()).toBe(true);
         expect(newResult.unwrap()).toBe(NEW_OK);
       });
 
       it("should async transform the result into a new fail result on asyncFlatMap", async () => {
-        const newResult = await result.asyncFlatMap(async () =>
-          Result.fail(NEW_ERROR)
-        );
+        const newResult = await result.asyncFlatMap(async () => Result.fail(NEW_ERROR));
         expect(newResult.isFail()).toBe(true);
         expect(newResult.unwrapFail()).toBe(NEW_ERROR);
       });
@@ -221,16 +204,12 @@ describe("Result", () => {
       });
 
       it("should keep the original ok result after a asyncMapFail", async () => {
-        const newResult = await result.asyncMapFail(async () =>
-          Result.fail(NEW_ERROR)
-        );
+        const newResult = await result.asyncMapFail(async () => Result.fail(NEW_ERROR));
         expect(newResult).toEqual(result);
       });
 
       it("should keep the original ok result after a asyncFlatMapFail", async () => {
-        const newResult = await result.asyncFlatMapFail(async () =>
-          Result.fail(NEW_ERROR)
-        );
+        const newResult = await result.asyncFlatMapFail(async () => Result.fail(NEW_ERROR));
         expect(newResult).toEqual(result);
       });
     });
